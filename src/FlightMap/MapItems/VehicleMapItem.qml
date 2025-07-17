@@ -208,7 +208,7 @@ MapQuickItem {
 
             Timer {
                 id: hideDelayTimer
-                interval: 1500            // Zeit in Millisekunden bis ausgebelendet (z. B. 500 = 0,5 Sek.)
+                interval: 2000            // Zeit in Millisekunden bis ausgebelendet (z. B. 500 = 0,5 Sek.)
                 repeat: false
                 onTriggered: {
                     if (!infoPinned && !cursorOver) {
