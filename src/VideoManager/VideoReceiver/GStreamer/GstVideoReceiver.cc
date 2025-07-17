@@ -17,6 +17,7 @@
 //              +-->queue-->_recorderValve[-->_fileSink]
 //-----------------------------------------------------------------------------
 
+
 #include "GstVideoReceiver.h"
 #include "GStreamerHelpers.h"
 #include "QGCLoggingCategory.h"

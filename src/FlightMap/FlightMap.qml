@@ -25,7 +25,6 @@ import QGroundControl.QGCPositionManager
 
 Map {
     id: _map
-
     plugin:     Plugin { name: "QGroundControl" }
     opacity:    0.99 // https://bugreports.qt.io/browse/QTBUG-82185
 
@@ -225,4 +224,47 @@ Map {
             }
         }
     }
+
+    Component.onCompleted: {
+        _map.center = QtPositioning.coordinate(52.206, 13.159)
+        _map.zoomLevel = 16
+        console.log("Karte zentriert auf EDAZ")
+    }
+
+/*
+    MapPolyline {
+        property var map
+        map: _map
+        line.width: 4
+        line.color: "deeppink"
+        z: 99
+
+        path: [
+            QtPositioning.coordinate(52.207, 13.146),
+            QtPositioning.coordinate(52.2055, 13.1726)
+        ]
+    }
+*/
+
+    HeadingOverlay {
+        id: headingOverlay
+        map: _map
+        vehicle: QGroundControl.multiVehicleManager.activeVehicle
+        //length: 100   // falls deine Komponente eine 'length'-Property unterstützt
+    }
+
+/*
+    MapItemView {
+        model: QGroundControl.multiVehicleManager.vehicles
+
+        delegate: FlightPathOverlay {
+            map: _map
+            vehicle: modelData
+        }
+    }
+
+*/
+
+
+
 } // Map

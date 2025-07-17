@@ -34,5 +34,10 @@ qt_add_qml_module(FlightMapModule
         Widgets/VerticalCompassAttitude.qml
         FlightMap.qml
         MapScale.qml
-    NO_PLUGIN # Required by Qt 6.6.3. TODO: Remove when no longer supported.
+    NO_PLUGIN
+    QML_FILES MapItems/FuturePathOverlay.qml
+    QML_FILES MapItems/HeadingOverlay.qml
+    QML_FILES MapItems/FlightPathOverlay.qml
+    QML_FILES
+    QML_FILES MapItems/SafetyCircle.qml  # Required by Qt 6.6.3. TODO: Remove when no longer supported.
 )

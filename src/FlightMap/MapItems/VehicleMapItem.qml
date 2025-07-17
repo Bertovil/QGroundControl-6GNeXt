@@ -17,15 +17,44 @@ import QGroundControl.ScreenTools
 import QGroundControl.Vehicle
 import QGroundControl.Controls
 
+
 /// Marker for displaying a vehicle location on the map
 MapQuickItem {
     id: _root
+    property var vehicle                                                         /// Vehicle object, undefined for ADSB vehicle
 
-    property var    vehicle                                                         /// Vehicle object, undefined for ADSB vehicle
+    function getVehicleTypeName(sysid) {
+        switch (sysid) {
+        case 1:  return "Multicopter X500"
+        case 2:  return "VTOL"
+        case 3:  return "VTOL"
+        case 4:  return "Multicopter X500"
+        case 5:  return "Multicopter X500"
+        case 6:  return "Airplane"
+        case 7:  return "Helicopter"
+        default: return "Unbekannt"
+        }
+    }
+
+    function getDroneName(sysid) {
+        switch (sysid) {
+        case 1: return "BOLEK"
+        case 2: return "MANTA-X1"
+        case 3: return "MANTA-X2"
+        case 4: return "LOLEK"
+        case 5: return "PAVEL"
+        case 6: return "TIMBER"
+        case 7: return "LOGO600"
+        default: return "Drohne #" + sysid
+        }
+    }
+
     property var    map
-    property double altitude:       Number.NaN                                      ///< NAN to not show
+    property double altitude: vehicle ? vehicle.altitudeRelative.value : Number.NaN /// Vehicle relative Altitude in m from T/O
+    property double velocity: vehicle ? vehicle.groundSpeed.value : Number.NaN      /// Vehicle Groundspeed in m/s
+
     property string callsign:       ""                                              ///< Vehicle callsign
-    property double heading:        vehicle ? vehicle.heading.value : Number.NaN    ///< Vehicle heading, NAN for none
+    property double heading:        vehicle ? vehicle.heading.value : Number.NaN    ///< Vehicle heading in degree, NAN for none
     property real   size:           ScreenTools.defaultFontPixelHeight * 3          /// Default size for icon, most usage overrides this
     property bool   alert:          false                                           /// Collision alert
 
@@ -37,12 +66,30 @@ MapQuickItem {
     property bool   _adsbVehicle:   vehicle ? false : true
     property var    _map:           map
     property bool   _multiVehicle:  QGroundControl.multiVehicleManager.vehicles.count > 1
+    property bool infoPinned: false
+    property bool cursorOver: false
+
+    property var _vehicle: vehicle  // Heading-Linie
+
+
+
 
     sourceItem: Item {
         id:         vehicleItem
         width:      vehicleIcon.width
         height:     vehicleIcon.height
         opacity:    _adsbVehicle || vehicle === _activeVehicle ? 1.0 : 0.5
+
+        /*
+        FuturePathOverlay {
+            vehicle: QGroundControl.multiVehicleManager.activeVehicle
+            map: _map
+            projectionSeconds: 15
+            intervalSeconds: 1
+        }
+        */
+
+
 
         MultiEffect {
             source: vehicleIcon
@@ -119,34 +166,211 @@ MapQuickItem {
             }
         }
 
+        // MAV-Symbol zuordnen
         Image {
-            id:                 vehicleIcon
-            source:             _adsbVehicle ? (alert ? "/qmlimages/AlertAircraft.svg" : "/qmlimages/AwarenessAircraft.svg") : vehicle.vehicleImageOpaque
-            mipmap:             true
-            width:              _root.size
-            sourceSize.width:   _root.size
-            fillMode:           Image.PreserveAspectFit
+            id: vehicleIcon
+
+            source: {
+                    switch (vehicle.id) {
+                    case 1: return "/src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMulticopter.png"
+                    case 2: return "/src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMANTA.png"
+                    case 3: return "/src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMANTA.png"
+                    case 4: return "/src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMulticopter.png"
+                    case 5: return "/src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMulticopter.png"
+                    case 6: return "/src/FlightMap/Images/6GNeXt/6GNeXt_vehiclePlane.png"
+                    case 7: return "/src/FlightMap/Images/6GNeXt/6GNeXt_vehicleHelicopter.png"
+                    default: return "src/FlightMap/Images/6GNeXt/6GNeXt_vehicleDefault.svg"
+                    }
+                }
+
+            mipmap: true
+            width: _root.size
+            sourceSize.width: _root.size
+            fillMode: Image.PreserveAspectFit
             transform: Rotation {
-                origin.x:       vehicleIcon.width  / 2
-                origin.y:       vehicleIcon.height / 2
-                angle:          isNaN(heading) ? 0 : heading
+                origin.x: vehicleIcon.width / 2
+                origin.y: vehicleIcon.height / 2
+                angle: isNaN(heading) ? 0 : heading
             }
         }
 
-        QGCMapLabel {
-            id:                         vehicleLabel
-            anchors.top:                parent.bottom
-            anchors.horizontalCenter:   parent.horizontalCenter
-            map:                        _map
-            text:                       vehicleLabelText
-            font.pointSize:             _adsbVehicle ? ScreenTools.defaultFontPointSize : ScreenTools.smallFontPointSize
-            visible:                    _adsbVehicle ? !isNaN(altitude) : _multiVehicle
-            property string vehicleLabelText: visible ?
-                                                  (_adsbVehicle ?
-                                                       QGroundControl.unitsConversion.metersToAppSettingsVerticalDistanceUnits(altitude).toFixed(0) + " " + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString + "\n" + callsign :
-                                                       (_multiVehicle ? qsTr("Vehicle %1").arg(vehicle.id) : "")) :
-                                                  ""
+        // Info-Fenster anzeigen beim Hovern mit Maus
+        Item {
+            id: infoWrapper
+            visible: true
+            opacity: 0.0
+            anchors.bottom: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
 
+            Behavior on opacity {
+                NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
+            }
+
+            Timer {
+                id: hideDelayTimer
+                interval: 2000            // Zeit in Millisekunden bis ausgebelendet (z. B. 500 = 0,5 Sek.)
+                repeat: false
+                onTriggered: {
+                    if (!infoPinned && !cursorOver) {
+                        infoWrapper.opacity = 0.0
+                    }
+                }
+            }
+
+            Rectangle {
+                id: infoBg
+                color: "#202020"
+                radius: 6
+                border.color: "#707070"
+                opacity: 0.8
+                anchors.fill: infoContent
+                anchors.margins: -6
+                z: -1
+            }
+
+            Column {
+                id: infoContent
+                anchors.margins: 10
+                spacing: 4
+
+                Row {
+                    spacing: 6
+                    Text {
+                        text: getDroneName(vehicle.id)
+                        font.pointSize: ScreenTools.defaultFontPointSize
+                        font.bold: true
+                        color: "white"
+                    }
+
+                    MouseArea {
+                        id: pinArea
+                        width: 16
+                        height: 16
+                        onClicked: {
+                            infoPinned = !infoPinned
+                            infoWrapper.opacity = infoPinned || cursorOver ? 1.0 : 0.0
+                        }
+                        Text {
+                            text: infoPinned ? "📌" : "📍"
+                            color: "white"
+                            font.pixelSize: 16
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 4
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    infoPinned = !infoPinned
+                                    infoWrapper.opacity = infoPinned || cursorOver ? 1.0 : 0.0
+                                }
+                            }
+                        }
+
+                    }
+                }
+
+
+                Column {
+                    spacing: 6
+
+                    Row {
+                        spacing: 12
+                        Text { text: "Vehicle#:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
+                        Text { text: vehicle.id; color: "white"; font.pointSize: ScreenTools.defaultFontPointSize }
+                    }
+                    Row {
+                        spacing: 12
+                        Text { text: "Typ:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
+                        Text { text: getVehicleTypeName(vehicle.id); color: "white"; font.pointSize: ScreenTools.defaultFontPointSize }
+                    }
+                    Row {
+                        spacing: 12
+                        Text { text: "Altitude:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
+                        Text {
+                            text: isNaN(altitude) ? "n/a" : Math.round(altitude) + " m"
+                            color: "white"
+                            font.pointSize: ScreenTools.defaultFontPointSize
+                        }
+                    }
+                    Row {
+                        spacing: 12
+                        Text { text: "Heading:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
+                        Text {
+                            text: isNaN(heading) ? "n/a" : Math.round(heading) + " °"
+                            color: "white"
+                            font.pointSize: ScreenTools.defaultFontPointSize
+                        }
+                    }
+                    Row {
+                        spacing: 12
+                        Text { text: "Velocity:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
+                        Text {
+                            text: isNaN(velocity) ? "n/a" : Math.round(velocity) + " m/s"
+                            color: "white"
+                            font.pointSize: ScreenTools.defaultFontPointSize
+                        }
+                    }
+                    Row {
+                        spacing: 8
+                        Text { text: "Battery:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
+                        Text {
+                            text: (vehicle.battery && !isNaN(vehicle.battery.percentRemaining))
+                                ? Math.round(vehicle.battery.percentRemaining) + " %"
+                                : "n/a"
+
+                            color: "white"
+                            font.pointSize: ScreenTools.defaultFontPointSize
+                        }
+                    }
+
+                }
+
+            }
         }
-    }
-}
+
+
+        // Cursor-Verhalten:    Hovern über Symbol --> Infofenster |
+        //                      Pin-Nadel anklicken --> Infofenster fixieren|
+        //                      Klicken auf Symbol --> Steuerung übernehmen
+        MouseArea {
+            id: hoverArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+
+            onEntered: {
+                cursorOver = true
+                hideDelayTimer.stop()
+                if (!infoPinned) infoWrapper.opacity = 1.0
+            }
+
+            onExited: {
+                cursorOver = false
+                if (!infoPinned) hideDelayTimer.start()
+            }
+
+            onClicked: {
+                // Infofeld pinnen/entpinnen mit Shift-Klick (optional)
+                if (Qt.shiftModifier & Qt.keyboardModifiers) {
+                    infoPinned = !infoPinned
+                    infoWrapper.opacity = infoPinned || cursorOver ? 1.0 : 0.0
+                    return
+                }
+
+                // 🚁 Steuerung übernehmen
+                if (vehicle && vehicle !== QGroundControl.multiVehicleManager.activeVehicle) {
+                    QGroundControl.multiVehicleManager.activeVehicle = vehicle
+                    console.log("Steuerung übernommen: Fahrzeug #" + vehicle.id)
+                }
+            }
+        }
+
+
+
+
+
+    } //sourceItem
+
+} //MapQuickItem

@@ -215,4 +215,11 @@
         <file alias="ZoomPlus.svg">src/FlightMap/Images/ZoomPlus.svg</file>
         <file alias="Viewer3D/City3DMapIcon.svg">src/Viewer3D/Images/city_3d_map_icon.svg</file>
     </qresource>
+    <qresource prefix="/">
+        <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMANTA.png</file>
+        <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehicleHelicopter.png</file>
+        <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMulticopter.png</file>
+        <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehiclePlane.png</file>
+        <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehicleDefault.svg</file>
+    </qresource>
 </RCC>
