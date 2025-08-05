@@ -23,6 +23,7 @@ import QGroundControl.MultiVehicleManager
 import QGroundControl.Vehicle
 import QGroundControl.QGCPositionManager
 
+
 Map {
     id: _map
     plugin:     Plugin { name: "QGroundControl" }
@@ -252,6 +253,9 @@ Map {
         vehicle: QGroundControl.multiVehicleManager.activeVehicle
         //length: 100   // falls deine Komponente eine 'length'-Property unterstützt
     }
+
+
+
 
 /*
     MapItemView {

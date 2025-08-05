@@ -1,17 +1,22 @@
 import QtQuick
 import QtLocation
 import QtPositioning
+import QGroundControl.Vehicle
 
 MapPolyline {
-    id: headingLine
-    property var vehicle
+    id: flightPathPreview
+    property var vehicle: QGroundControl.multiVehicleManager.activeVehicle
+    //property real arcLength: 200                // Länge der prognostizierten Flugbahn
+    property real t_predict: 10                 // Sekunden Vorschau der prognostizierten Flugbahn
+    property real earthRadius: 6378137          // Erdradius in Metern
+    property int segments: 25                   // Wie glatt die Kurve ist
     property var map
-    property real length: 100
-    property real earthRadius: 6371000
+    property real _rollAngle: vehicle ? vehicle.roll.rawValue : 0
 
     map: map
-    line.width: 3
-    line.color: "deeppink"
+    line.width: 15
+    line.color: Qt.rgba(1.0, 0.0, 0.5, 0.3)     // RGB für Pink + Alpha = 0.6
+    //line.color: "deeppink"
     z: 99
     path: []
 
@@ -22,20 +27,56 @@ MapPolyline {
         triggeredOnStart: true
 
         onTriggered: {
-            if (!vehicle || !vehicle.latitude || !vehicle.longitude || !vehicle.heading) return
+            if (!vehicle || !vehicle.latitude || !vehicle.longitude || !vehicle.heading || !vehicle.groundSpeed)
+                return
 
-            let brng = vehicle.heading.value * Math.PI / 180
-            let lat1 = (typeof vehicle.latitude === "number" ? vehicle.latitude : vehicle.latitude.value) * Math.PI / 180
-            let lon1 = (typeof vehicle.longitude === "number" ? vehicle.longitude : vehicle.longitude.value) * Math.PI / 180
-            let d = length / earthRadius
+            const speed = vehicle.groundSpeed.value      // [m/s]
+            const arcLength = speed*t_predict
+            const rollDeg = vehicle.roll.rawValue           // [°]
+            const headingDeg = vehicle.heading.value     // [°]
 
-            let lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(brng))
-            let lon2 = lon1 + Math.atan2(Math.sin(brng)*Math.sin(d)*Math.cos(lat1), Math.cos(d)-Math.sin(lat1)*Math.sin(lat2))
+            if (Math.abs(rollDeg) < 2) return       // Geradeausflug → keine Kurve
 
-            path = [
-                QtPositioning.coordinate(lat1 * 180/Math.PI, lon1 * 180/Math.PI),
-                QtPositioning.coordinate(lat2 * 180/Math.PI, lon2 * 180/Math.PI)
-            ]
+            const rollRad = rollDeg * Math.PI / 180
+            const headingRad = -headingDeg * Math.PI / 180 + Math.PI/2
+            const lat = vehicle.latitude
+            const lon = vehicle.longitude
+            const latRad = lat * Math.PI / 180
+
+            const turnDirection = rollRad >= 0 ? -1 : 1
+            const g = 9.80665
+            const turnRadius = speed * speed / (g * Math.tan(Math.abs(rollRad)))*1.16
+
+            if (!isFinite(turnRadius) || turnRadius <= 0 || turnRadius > 10000)
+                return
+
+            const arcAngle = arcLength / turnRadius // [rad]
+
+            const newPath = []
+
+            for (let i = 0; i <= segments; i++) {
+                let alpha = arcAngle * i / segments
+                let localX = turnRadius * Math.sin(alpha)
+                let localY = turnRadius * (1 - Math.cos(alpha)) * turnDirection
+
+            //  Rotation in Heading-Richtung
+                //console.log(vehicle.heading.value)
+
+                let rotatedX = localX * Math.cos(headingRad) - localY * Math.sin(headingRad)
+                let rotatedY = localX * Math.sin(headingRad) + localY * Math.cos(headingRad)
+
+                //console.log("localX:", localX)
+                //console.log("localY:", localY)
+
+                // Umrechnung in GPS-Koordinaten
+                let deltaLat = (rotatedY / earthRadius) * (180 / Math.PI)
+                let deltaLon = (rotatedX / (earthRadius * Math.cos(latRad))) * (180 / Math.PI)
+
+                let point = QtPositioning.coordinate(lat + deltaLat, lon + deltaLon)
+                newPath.push(point)
+            }
+
+            path = newPath
         }
     }
 }

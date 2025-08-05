@@ -38,6 +38,6 @@ qt_add_qml_module(FlightMapModule
     QML_FILES MapItems/FuturePathOverlay.qml
     QML_FILES MapItems/HeadingOverlay.qml
     QML_FILES MapItems/FlightPathOverlay.qml
-    QML_FILES
-    QML_FILES MapItems/SafetyCircle.qml  # Required by Qt 6.6.3. TODO: Remove when no longer supported.
+    QML_FILES MapItems/SafetyCircle.qml
+    QML_FILES MapItems/TurnArcOverlay.qml
 )

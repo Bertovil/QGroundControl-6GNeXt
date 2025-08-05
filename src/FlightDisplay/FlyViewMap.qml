@@ -249,10 +249,45 @@ FlightMap {
     }
 
     // Add trajectory lines to the map
+
+    ListModel {
+        id: trajectoryModel
+    }
+
+    Timer {
+        interval: 500 // prüft alle 0.5 Sekunden
+        running: true
+        repeat: true
+        onTriggered: {
+            const now = Date.now()
+            for (let i = trajectoryModel.count - 1; i >= 0; i--) {
+                const timestamp = trajectoryModel.get(i).timestamp
+                if (now - timestamp >= 30000) {
+                    trajectoryModel.remove(i)
+                    trajectoryPolyline.path = trajectoryModelToCoordinates()
+                }
+            }
+        }
+    }
+
+    function trajectoryModelToCoordinates() {
+        const coords = []
+        for (let i = 0; i < trajectoryModel.count; i++) {
+            coords.push(QtPositioning.coordinate(
+                trajectoryModel.get(i).latitude,
+                trajectoryModel.get(i).longitude))
+        }
+        return coords
+    }
+
+
     MapPolyline {
         id:         trajectoryPolyline
         line.width: 3
-        line.color: "red"
+        //line.color: "red"
+        line.color: Qt.rgba(1.0, 1.0, 0.6, 0.4) // hellgelb mit Alpha = 40%
+
+
         z:          QGroundControl.zOrderTrajectoryLines
         visible:    !pipMode
 
@@ -260,12 +295,23 @@ FlightMap {
             target:                 QGroundControl.multiVehicleManager
             function onActiveVehicleChanged(activeVehicle) {
                 trajectoryPolyline.path = _activeVehicle ? _activeVehicle.trajectoryPoints.list() : []
+                trajectoryModel.clear() // Punkte im Modell löschen
+                trajectoryPolyline.path = [] // Pfad der Polyline leeren
             }
         }
 
         Connections {
             target:                             _activeVehicle ? _activeVehicle.trajectoryPoints : null
-            onPointAdded: (coordinate) =>       trajectoryPolyline.addCoordinate(coordinate)
+            //onPointAdded: (coordinate) =>       trajectoryPolyline.addCoordinate(coordinate)
+            onPointAdded: (coordinate) => {
+                trajectoryModel.append({
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude,
+                    timestamp: Date.now()
+                })
+                trajectoryPolyline.path = trajectoryModelToCoordinates()
+            }
+
             onUpdateLastPoint: (coordinate) =>  trajectoryPolyline.replaceCoordinate(trajectoryPolyline.pathLength() - 1, coordinate)
             onPointsCleared:                    trajectoryPolyline.path = []
         }
