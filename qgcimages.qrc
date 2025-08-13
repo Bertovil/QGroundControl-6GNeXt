@@ -221,5 +221,9 @@
         <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehicleMulticopter.png</file>
         <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehiclePlane.png</file>
         <file>src/FlightMap/Images/6GNeXt/6GNeXt_vehicleDefault.svg</file>
+        <file>src/FlightMap/Images/6GNeXt/arrow.svg</file>
+        <file>src/FlightMap/Images/6GNeXt/arrow_down.png</file>
+        <file>src/FlightMap/Images/6GNeXt/arrow_up.png</file>
+        <file>src/FlightMap/Images/6GNeXt/no_arrow.png</file>
     </qresource>
 </RCC>

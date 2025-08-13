@@ -17,6 +17,13 @@ import QGroundControl.ScreenTools
 import QGroundControl.Vehicle
 import QGroundControl.Controls
 
+import QGroundControl.FactSystem
+import QGroundControl.FactControls
+import QGroundControl.Controls 1.0
+
+
+
+
 
 /// Marker for displaying a vehicle location on the map
 MapQuickItem {
@@ -52,6 +59,15 @@ MapQuickItem {
     property var    map
     property double altitude: vehicle ? vehicle.altitudeRelative.value : Number.NaN /// Vehicle relative Altitude in m from T/O
     property double velocity: vehicle ? vehicle.groundSpeed.value : Number.NaN      /// Vehicle Groundspeed in m/s
+    property real climbRate: vehicle ? vehicle.climbRate.rawValue : Number.NaN
+
+    property var    _batteryGroup:                  globals.activeVehicle && globals.activeVehicle.batteries.count ? globals.activeVehicle.batteries.get(0) : undefined
+    property var    _batteryValue:                  _batteryGroup ? _batteryGroup.percentRemaining.value : 0
+    property var    _batPercentRemaining:           isNaN(_batteryValue) ? 0 : _batteryValue
+    property bool   _batLow:                        _batPercentRemaining < 25
+
+
+
 
     property string callsign:       ""                                              ///< Vehicle callsign
     property double heading:        vehicle ? vehicle.heading.value : Number.NaN    ///< Vehicle heading in degree, NAN for none
@@ -70,7 +86,6 @@ MapQuickItem {
     property bool cursorOver: false
 
     property var _vehicle: vehicle  // Heading-Linie
-
 
 
 
@@ -194,6 +209,33 @@ MapQuickItem {
             }
         }
 
+        // Climb- oder Descent-Symbol anzeigen
+        Item {
+            id: climbSinkIndicator
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: 0  // negative Werte verschieben nach links
+            visible: true
+            width: 24
+            height: 24
+
+
+
+            Image {
+                anchors.fill: parent
+                source: {
+                    if (climbRate > 0.5)
+                        return "/src/FlightMap/Images/6GNeXt/arrow_up.png"      // Symbol für Steigen
+                    else if (climbRate < -0.5)
+                        return "/src/FlightMap/Images/6GNeXt/arrow_down.png"    // Symbol für Sinken
+                    else
+                        return "/src/FlightMap/Images/6GNeXt/no_arrow.png"      // Symbol für keine Höhenänderung
+                }
+                fillMode: Image.PreserveAspectFit
+            }
+        }
+
+
         // Info-Fenster anzeigen beim Hovern mit Maus
         Item {
             id: infoWrapper
@@ -201,6 +243,7 @@ MapQuickItem {
             opacity: 0.0
             anchors.bottom: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.horizontalCenterOffset: 35  // negative Werte verschieben nach links
 
             Behavior on opacity {
                 NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
@@ -313,13 +356,19 @@ MapQuickItem {
                         }
                     }
                     Row {
-                        spacing: 8
+                        spacing: 12
                         Text { text: "Battery:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
                         Text {
-                            text: (vehicle.battery && !isNaN(vehicle.battery.percentRemaining))
-                                ? Math.round(vehicle.battery.percentRemaining) + " %"
-                                : "n/a"
-
+                            text: isNaN(_batPercentRemaining) ? "n/a" : Math.round(_batPercentRemaining) + " %"
+                            color: "white"
+                            font.pointSize: ScreenTools.defaultFontPointSize
+                        }
+                    }
+                    Row {
+                        spacing: 12
+                        Text { text: "Climb Rate:"; color: "lightgray"; font.pointSize: ScreenTools.defaultFontPointSize }
+                        Text {
+                            text: isNaN(climbRate) ? "n/a" : Math.round(climbRate) + " m/s"
                             color: "white"
                             font.pointSize: ScreenTools.defaultFontPointSize
                         }

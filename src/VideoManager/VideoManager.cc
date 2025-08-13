@@ -780,3 +780,28 @@ void FinishVideoInitialization::run()
 {
     VideoManager::instance()->startVideo();
 }
+
+void VideoManager::setPersistentUdpSettings(const QString& url, const QString& source)
+{
+    QString cleanedUrl = url;
+    if (cleanedUrl.startsWith("udp://")) {
+        cleanedUrl = cleanedUrl.mid(6); // "udp://" entfernen
+    }
+
+    QSettings settings;
+    settings.beginGroup("Video");
+    settings.setValue("udpUrl", cleanedUrl);
+    settings.setValue("videoSource", source);
+    settings.endGroup();
+    settings.sync();
+
+    _videoSettings->udpUrl()->setRawValue(cleanedUrl);
+    _videoSettings->videoSource()->setRawValue(source);
+
+    qDebug() << "Persistente Videoeinstellungen gesetzt und aktualisiert:";
+    qDebug() << "udpUrl =" << cleanedUrl;
+    qDebug() << "videoSource =" << source;
+}
+
+
+

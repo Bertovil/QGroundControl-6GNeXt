@@ -1,0 +1,40 @@
+{
+  "vehicles": [
+    {
+      "id": 1,
+      "name": "BOLEK",
+      "videoUrl": "udp://192.168.8.214:5001"
+    },
+    {
+      "id": 2,
+      "name": "MANTA-X1",
+      "videoUrl": "udp://192.168.8.214:5002"
+    },
+    {
+      "id": 3,
+      "name": "MANTA-X2",
+      "videoUrl": "udp://192.168.8.214:5003"
+    },
+    {
+      "id": 4,
+      "name": "LOLEK",
+      "videoUrl": "udp://192.168.8.214:5004"
+    },
+    {
+      "id": 5,
+      "name": "PAVEL",
+      "videoUrl": "udp://192.168.8.214:5005"
+    },  
+    {
+      "id": 6,
+      "name": "TIMBER",
+      "videoUrl": "udp://192.168.8.214:5006"
+    },
+    {
+      "id": 7,
+      "name": "LOGO",
+      "videoUrl": "udp://192.168.8.214:5007"
+    }
+  ]
+}
+

@@ -19,15 +19,31 @@ import QGroundControl.MultiVehicleManager
 import QGroundControl.ScreenTools
 import QGroundControl.Controllers
 
+
 Rectangle {
     id:     _root
     width:  parent.width
     height: ScreenTools.toolbarHeight
     color:  qgcPal.toolbarBackground
 
+
+
+    signal videoStreamPortChanged(int port)
+    property var videoSettings: QGroundControl.settingsManager.videoSettings
+    property var videoManager: QGroundControl.videoManager
+    property var vehicleConfig: ({})
+
+
+
+
+
+
+
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
     property bool   _communicationLost: _activeVehicle ? _activeVehicle.vehicleLinkManager.communicationLost : false
     property color  _mainStatusBGColor: qgcPal.brandingPurple
+    property bool showPlannedRoute: true
+
 
     function dropMainStatusIndicatorTool() {
         mainStatusIndicator.dropMainStatusIndicator();
@@ -47,7 +63,7 @@ Rectangle {
 
     Rectangle {
         anchors.fill: viewButtonRow
-        
+
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop { position: 0;                                     color: _mainStatusBGColor }
@@ -82,6 +98,53 @@ Rectangle {
             onClicked:          _activeVehicle.closeVehicle()
             visible:            _activeVehicle && _communicationLost
         }
+/*
+        QGCButton {
+            id: routeToggleButton
+            text: showPlannedRoute ? qsTr("Route ausblenden") : qsTr("Route anzeigen")
+            onClicked: showPlannedRoute = !showPlannedRoute
+            visible: _activeVehicle // optional: nur wenn Fahrzeug aktiv ist
+
+        }
+*/
+
+        LabelledComboBox {
+
+               property var streamUrlMap: {
+                   "No Video": "",
+                   "Video from BOLEK": "udp://192.168.8.214:5001",
+                   "Video from MANTA-X1": "udp://192.168.8.214:5002",
+                   "Video from MANTA-X2": "udp://192.168.8.214:5003",
+                   "Video from LOLEK": "udp://192.168.8.214:5004",
+                   "Video from PAVEL": "udp://192.168.8.214:5005",
+                   "Video from TIMBER": "udp://192.168.8.214:5006",
+                   "Video from LOGO": "udp://192.168.8.214:5007"
+               }
+
+
+               id: videoStreamPortDropdown
+               model: ["No Video",
+                       "Video from BOLEK",
+                       "Video from MANTA-X1",
+                       "Video from MANTA-X2",
+                       "Video from LOLEK",
+                       "Video from PAVEL",
+                       "Video from TIMBER",
+                       "Video from LOGO" ]
+
+               onCurrentIndexChanged: {
+                   let selectedText = videoStreamPortDropdown.model[videoStreamPortDropdown.currentIndex]
+                   let selectedUrl = streamUrlMap[selectedText]
+                   let selectedPort = selectedUrl.split(":")[1] // Port extrahieren
+
+                   QGroundControl.videoManager.setPersistentUdpSettings(selectedUrl, "UDP h.264 Video Stream")
+                   QGroundControl.videoManager.stopVideo()
+                   QGroundControl.videoManager.startVideo()
+
+               }
+
+           }
+
     }
 
     QGCFlickable {
@@ -97,6 +160,8 @@ Rectangle {
         flickableDirection:     Flickable.HorizontalFlick
 
         FlyViewToolBarIndicators { id: toolIndicators }
+
+
     }
 
     //-------------------------------------------------------------------------

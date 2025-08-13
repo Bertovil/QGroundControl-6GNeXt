@@ -13,6 +13,7 @@ MapPolyline {
     property var map
     property real _rollAngle: vehicle ? vehicle.roll.rawValue : 0
 
+
     map: map
     line.width: 15
     line.color: Qt.rgba(1.0, 0.0, 0.5, 0.3)     // RGB für Pink + Alpha = 0.6
@@ -34,6 +35,8 @@ MapPolyline {
             const arcLength = speed*t_predict
             const rollDeg = vehicle.roll.rawValue           // [°]
             const headingDeg = vehicle.heading.value     // [°]
+            //const headingDeg = vehicle.groundCourse.value // funktioniert nicht
+
 
             if (Math.abs(rollDeg) < 2) return       // Geradeausflug → keine Kurve
 
@@ -46,8 +49,10 @@ MapPolyline {
             const turnDirection = rollRad >= 0 ? -1 : 1
             const g = 9.80665
             const turnRadius = speed * speed / (g * Math.tan(Math.abs(rollRad)))*1.16
+            //console.log("TurnRadius:", turnRadius)
 
-            if (!isFinite(turnRadius) || turnRadius <= 0 || turnRadius > 10000)
+
+            if (!isFinite(turnRadius) || turnRadius <= 0 || turnRadius > 100000)
                 return
 
             const arcAngle = arcLength / turnRadius // [rad]
@@ -71,9 +76,19 @@ MapPolyline {
                 // Umrechnung in GPS-Koordinaten
                 let deltaLat = (rotatedY / earthRadius) * (180 / Math.PI)
                 let deltaLon = (rotatedX / (earthRadius * Math.cos(latRad))) * (180 / Math.PI)
+/*
+                if (vehicle.groundSpeed >=2.0) {
+                    let point = QtPositioning.coordinate(lat + deltaLat, lon + deltaLon)
+                }
+
+                else {
+                const newPath = []
+                }
+*/
 
                 let point = QtPositioning.coordinate(lat + deltaLat, lon + deltaLon)
                 newPath.push(point)
+
             }
 
             path = newPath

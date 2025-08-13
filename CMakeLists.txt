@@ -208,7 +208,10 @@ find_package(Qt6
         Quick3D
         SerialPort
         Test
+
 )
+
+
 
 if(LINUX)
     find_package(Qt6 COMPONENTS WaylandClient)
